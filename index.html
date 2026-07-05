@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>OW2 カウンター参照（overpicker版）</title>
+<style>
+  :root{
+    --bg:#020617; --panel:#0f172a; --panel2:#1e293b; --line:#1e293b; --line2:#334155;
+    --txt:#e2e8f0; --mut:#94a3b8; --mut2:#64748b;
+    --tank:#38bdf8; --dps:#fb7185; --sup:#34d399;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    -webkit-text-size-adjust:100%;}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px 14px 40px;}
+  header h1{font-size:1.4rem;margin:0;font-weight:800;letter-spacing:-.01em}
+  header .sub{color:var(--mut);font-size:.82rem;margin-top:4px;line-height:1.5}
+  .count{font-family:ui-monospace,monospace;color:var(--mut2);font-size:.72rem}
+
+  .sticky{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 78%,transparent);padding:10px 0;margin-top:12px}
+  .controls{display:flex;flex-direction:column;gap:8px}
+  .searchbox{position:relative}
+  .searchbox input{width:100%;padding:12px 38px 12px 12px;border-radius:10px;border:1px solid var(--line2);
+    background:var(--panel);color:var(--txt);font-size:16px;outline:none;}
+  .searchbox input:focus{border-color:#64748b}
+  .searchbox .clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--mut2);font-size:1.1rem;padding:6px 8px;cursor:pointer}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .filters button{flex:1 1 auto;min-height:40px;padding:8px 10px;border-radius:10px;border:1px solid var(--line2);
+    background:var(--panel);color:var(--mut);font-size:.85rem;font-weight:600;cursor:pointer}
+  .filters button.on{color:#fff;border-color:transparent}
+  .filters button.on.all{background:#e2e8f0;color:#0f172a}
+  .filters button.on.tank{background:#0284c7}
+  .filters button.on.damage{background:#e11d48}
+  .filters button.on.support{background:#059669}
+
+  .detail{margin-top:14px;border-radius:16px;border:1px solid var(--line);background:var(--panel);padding:16px}
+  .detail.tank{border-color:#0369a1}.detail.damage{border-color:#9f1239}.detail.support{border-color:#047857}
+  .dhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-family:ui-monospace,monospace;font-size:.72rem;padding:4px 8px;border-radius:7px;border:1px solid var(--line2);color:var(--mut)}
+  .badge.tank{color:var(--tank)}.badge.damage{color:var(--dps)}.badge.support{color:var(--sup)}
+  .dname{font-size:1.25rem;font-weight:800;color:#fff}
+  .den{font-family:ui-monospace,monospace;font-size:.72rem;color:#94a3b8}
+  .close{margin-left:auto;border:1px solid var(--line2);background:none;color:var(--mut);border-radius:9px;padding:7px 11px;font-size:.78rem;cursor:pointer}
+  .dexpl{font-size:.76rem;color:var(--mut);line-height:1.6;margin:2px 0 12px}
+  .dexpl b{color:var(--txt)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+  .legend span{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;color:var(--mut)}
+  .lg{display:inline-block;width:24px;text-align:center;padding:2px 0;border-radius:5px;font-weight:800;font-size:.66rem;font-family:ui-monospace,monospace}
+
+  .dtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}
+  .dtab{flex:1 1 auto;min-height:38px;padding:6px 10px;border-radius:9px;border:1px solid var(--line2);background:#0b1324;color:var(--mut);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+  .dtab .dot{width:8px;height:8px;border-radius:50%}
+  .dtab.on{color:#fff;border-color:transparent}
+  .dtab.on.tank{background:#0284c7}.dtab.on.damage{background:#e11d48}.dtab.on.support{background:#059669}
+  .evtog{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:5px 10px;border-radius:8px;border:1px solid var(--line2);background:#0b1324;color:var(--mut2);font-size:.74rem;font-weight:600;cursor:pointer}
+  .evtog.on{color:var(--txt);border-color:#475569}
+  .empty2{color:var(--mut2);font-size:.82rem;padding:8px 6px;line-height:1.6}
+
+  .cols{display:grid;gap:10px;grid-template-columns:1fr}
+  @media(min-width:820px){.cols{grid-template-columns:1fr 1fr 1fr}}
+  .col{border:1px solid var(--line);border-radius:12px;background:#0b1324;padding:10px}
+  .col h3{font-size:.72rem;margin:0 0 8px;font-family:ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+  .col h3 .dot{width:8px;height:8px;border-radius:50%}
+  .col h3.tank{color:var(--tank)}.col h3.damage{color:var(--dps)}.col h3.support{color:var(--sup)}
+  .row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px}
+  .row:hover{background:rgba(255,255,255,.03)}
+  .row .rn{flex:1;min-width:0;font-size:.86rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .row .re{font-family:ui-monospace,monospace;font-size:.6rem;color:#64748b;margin-left:4px}
+  .sc{width:40px;text-align:center;padding:3px 0;border-radius:7px;font-weight:800;font-size:.78rem;font-family:ui-monospace,monospace;flex:none}
+  .s20{background:#059669;color:#fff}
+  .s10{background:#10b981;color:#052e1f}
+  .s5{background:#065f46;color:#d1fae5}
+  .s0{background:#475569;color:#e2e8f0}
+  .sm10{background:#9f1239;color:#fecdd3}
+  .sm20{background:#e11d48;color:#fff}
+
+  .hint{margin-top:14px;border:1px dashed var(--line2);border-radius:16px;background:#0b1324;padding:18px;text-align:center;color:var(--mut);font-size:.86rem}
+
+  .listhead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
+  .listhead h2{font-size:.72rem;margin:0;font-family:ui-monospace,monospace;letter-spacing:.08em;color:var(--mut2);text-transform:uppercase}
+  .grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .hero{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--panel);border-radius:11px;padding:10px 11px;text-align:left;cursor:pointer;min-height:52px}
+  .hero .nm{display:block;font-size:.9rem;font-weight:700;line-height:1.2;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hero .en{display:block;font-family:ui-monospace,monospace;font-size:.62rem;color:#94a3b8;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hero.tank{border-color:#0369a1}.hero.damage{border-color:#9f1239}.hero.support{border-color:#047857}
+  .hero.sel.tank{background:#0284c7}.hero.sel.damage{background:#e11d48}.hero.sel.support{background:#059669}
+  .hero.sel .nm{color:#fff}.hero.sel .en{color:rgba(255,255,255,.75)}
+  .hero .hdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .hdot.tank{background:var(--tank)}.hdot.damage{background:var(--dps)}.hdot.support{background:var(--sup)}
+
+  footer{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;font-size:.72rem;line-height:1.6;color:var(--mut2)}
+  .warn{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:12px;color:var(--mut)}
+  .warn .ic{color:#fbbf24;font-size:1rem;line-height:1}
+  footer b{color:var(--mut)}footer .src{margin-top:10px}
+
+  .qrbtn{margin-top:10px;width:100%;border:1px solid var(--line2);background:var(--panel);color:var(--txt);border-radius:10px;padding:11px;font-size:.85rem;font-weight:600;cursor:pointer}
+  .modal{position:fixed;inset:0;background:rgba(2,6,23,.82);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.show{display:flex}
+  .card{background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:20px;max-width:340px;width:100%;text-align:center}
+  .card h3{margin:0 0 6px;font-size:1rem}.card p{font-size:.78rem;color:var(--mut);line-height:1.6;margin:0 0 12px}
+  .qrimg{background:#fff;border-radius:12px;padding:12px;display:inline-block;min-height:180px;min-width:180px}
+  .qrimg img{display:block;width:200px;height:200px}
+  .urlrow{display:flex;gap:6px;margin-top:12px}
+  .urlrow input{flex:1;min-width:0;padding:9px;border-radius:8px;border:1px solid var(--line2);background:var(--bg);color:var(--txt);font-size:.72rem}
+  .urlrow button{border:1px solid var(--line2);background:var(--panel2);color:var(--txt);border-radius:8px;padding:0 12px;font-size:.78rem;cursor:pointer}
+  .card .cls{margin-top:14px;border:none;background:none;color:var(--mut);font-size:.8rem;cursor:pointer}
+  .qrwarn{color:#fbbf24;font-size:.72rem;margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>OW2 カウンター参照 <span class="count">52体 / overpicker</span></h1>
+    <div class="sub">ヒーローを選ぶと「そのヒーローに強い順」に色分け表示。緑ほど刺さる（対策候補）、赤はそのヒーローが有利な相手。</div>
+  </header>
+
+  <div class="sticky">
+    <div class="controls">
+      <div class="searchbox">
+        <input id="q" type="text" placeholder="名前で検索（日本語・英語どちらでも / 例: アナ, tracer）" autocomplete="off" />
+        <button class="clr" id="clr" style="display:none" aria-label="消去">×</button>
+      </div>
+      <div class="filters" id="filters"></div>
+    </div>
+  </div>
+
+  <div id="detail"></div>
+
+  <div class="listhead"><h2>ヒーロー一覧</h2><span class="count" id="shown"></span></div>
+  <div class="grid" id="grid"></div>
+
+  <button class="qrbtn" id="qrbtn">📱 スマホで開く（QR表示）</button>
+
+  <footer>
+    <div class="warn"><span class="ic">⚠</span>
+      <span>相性は固定値ではありません（パッチ・マップ・ランク帯・技量で変動）。数値は各ヒーローが<b>選択ヒーロー</b>に対してどれだけ有利かのスコア（-20〜+20）です。overpickerの<b>独自スコア</b>であり、勝率などの実測値ではない点にご注意を。</span>
+    </div>
+    <div class="src"><b>情報源</b>：overpicker.com/counters（制作者 Autopoietico、最終更新 2026-07-03）のカウンター・スコア表(-20〜+20)をそのまま使用（Blizzard非公式）。日本語名・ロールは Overwatch公式(ja-jp)＋apexaim.yqz.jp を参照。</div>
+  </footer>
+</div>
+
+<div class="modal" id="modal">
+  <div class="card">
+    <h3>スマホで開く</h3>
+    <p>このページを<b>ネット上に公開</b>してから、そのURLをスマホで読み込みます。下のQR/URLは今開いているページのアドレスです。</p>
+    <div class="qrimg" id="qrimg"></div>
+    <div class="urlrow"><input id="urlfield" readonly /><button id="copyurl">コピー</button></div>
+    <div class="qrwarn" id="qrwarn"></div>
+    <button class="cls" id="closemodal">閉じる</button>
+  </div>
+</div>
+
+<script>
+/* データ出典: overpicker.com/counters (Autopoietico, 最終更新 2026-07-03) のスコア表をそのまま使用。
+   counterMatrix[A][B] = A が B に対してどれだけ有利か (-20〜+20)。 */
+const counterMatrix = {"Ana":{"Ana":0,"Anran":0,"Ashe":-10,"Baptiste":10,"Bastion":-10,"Brigitte":10,"Cassidy":0,"D.Va":10,"Domina":10,"Doomfist":-10,"Echo":10,"Emre":0,"Freja":-10,"Genji":-10,"Hanzo":0,"Hazard":0,"Illari":0,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":0,"Juno":0,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":0,"Mauga":10,"Mei":0,"Mercy":0,"Mizuki":0,"Moira":0,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":10,"Reinhardt":10,"Roadhog":0,"Shion":10,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":10,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":0,"Venture":0,"Widowmaker":0,"Winston":0,"Wrecking Ball":10,"Wuyang":10,"Zarya":-10,"Zenyatta":0},"Anran":{"Ana":10,"Anran":-10,"Ashe":-10,"Baptiste":10,"Bastion":0,"Brigitte":0,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":-10,"Echo":-10,"Emre":10,"Freja":-20,"Genji":0,"Hanzo":0,"Hazard":0,"Illari":-10,"Jetpack Cat":-20,"Junker Queen":0,"Junkrat":-10,"Juno":-20,"Kiriko":-10,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":20,"Mei":0,"Mercy":-10,"Mizuki":20,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":-10,"Reaper":-10,"Reinhardt":10,"Roadhog":-10,"Shion":0,"Sierra":20,"Sigma":0,"Sojourn":0,"Soldier: 76":-10,"Sombra":-10,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":10,"Vendetta":10,"Venture":-20,"Widowmaker":0,"Winston":20,"Wrecking Ball":20,"Wuyang":0,"Zarya":-10,"Zenyatta":0},"Ashe":{"Ana":0,"Anran":10,"Ashe":-10,"Baptiste":10,"Bastion":10,"Brigitte":20,"Cassidy":10,"D.Va":10,"Domina":10,"Doomfist":10,"Echo":10,"Emre":10,"Freja":0,"Genji":0,"Hanzo":10,"Hazard":-10,"Illari":0,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":20,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":-10,"Mauga":10,"Mei":0,"Mercy":-10,"Mizuki":10,"Moira":0,"Orisa":0,"Pharah":0,"Ramattra":10,"Reaper":-10,"Reinhardt":0,"Roadhog":0,"Shion":-10,"Sierra":0,"Sigma":0,"Sojourn":-10,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":10,"Vendetta":0,"Venture":-20,"Widowmaker":10,"Winston":0,"Wrecking Ball":0,"Wuyang":10,"Zarya":0,"Zenyatta":-10},"Baptiste":{"Ana":-10,"Anran":10,"Ashe":-20,"Baptiste":10,"Bastion":20,"Brigitte":0,"Cassidy":-10,"D.Va":-10,"Domina":0,"Doomfist":10,"Echo":-10,"Emre":-10,"Freja":10,"Genji":0,"Hanzo":-20,"Hazard":0,"Illari":-20,"Jetpack Cat":-10,"Junker Queen":20,"Junkrat":-10,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":10,"Mauga":-10,"Mei":-20,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":-10,"Pharah":0,"Ramattra":-10,"Reaper":0,"Reinhardt":10,"Roadhog":10,"Shion":-20,"Sierra":-10,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":0,"Symmetra":-10,"Torbj\u00f6rn":10,"Tracer":-10,"Vendetta":20,"Venture":-10,"Widowmaker":10,"Winston":10,"Wrecking Ball":-10,"Wuyang":0,"Zarya":-10,"Zenyatta":20},"Bastion":{"Ana":0,"Anran":0,"Ashe":-10,"Baptiste":0,"Bastion":0,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":-20,"Doomfist":0,"Echo":0,"Emre":0,"Freja":-10,"Genji":0,"Hanzo":0,"Hazard":0,"Illari":0,"Jetpack Cat":10,"Junker Queen":-10,"Junkrat":20,"Juno":10,"Kiriko":0,"Lifeweaver":0,"L\u00facio":-10,"Mauga":-10,"Mei":0,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":0,"Pharah":10,"Ramattra":-10,"Reaper":0,"Reinhardt":0,"Roadhog":10,"Shion":-10,"Sierra":-10,"Sigma":10,"Sojourn":10,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":-10,"Tracer":10,"Vendetta":0,"Venture":-20,"Widowmaker":10,"Winston":-10,"Wrecking Ball":10,"Wuyang":-20,"Zarya":10,"Zenyatta":0},"Brigitte":{"Ana":10,"Anran":0,"Ashe":0,"Baptiste":0,"Bastion":10,"Brigitte":0,"Cassidy":0,"D.Va":-10,"Domina":0,"Doomfist":0,"Echo":0,"Emre":-10,"Freja":10,"Genji":10,"Hanzo":-10,"Hazard":-10,"Illari":10,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":-20,"Juno":0,"Kiriko":0,"Lifeweaver":20,"L\u00facio":-20,"Mauga":10,"Mei":0,"Mercy":10,"Mizuki":0,"Moira":-10,"Orisa":10,"Pharah":10,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":0,"Shion":0,"Sierra":10,"Sigma":10,"Sojourn":0,"Soldier: 76":10,"Sombra":0,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":-20,"Vendetta":-20,"Venture":-10,"Widowmaker":10,"Winston":-10,"Wrecking Ball":-10,"Wuyang":-20,"Zarya":-10,"Zenyatta":0},"Cassidy":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":10,"Bastion":0,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":0,"Echo":10,"Emre":0,"Freja":0,"Genji":0,"Hanzo":10,"Hazard":0,"Illari":-10,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":0,"Juno":0,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":0,"Mei":20,"Mercy":-10,"Mizuki":0,"Moira":0,"Orisa":0,"Pharah":0,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":10,"Shion":0,"Sierra":-10,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":0,"Torbj\u00f6rn":-10,"Tracer":-10,"Vendetta":10,"Venture":-10,"Widowmaker":10,"Winston":0,"Wrecking Ball":0,"Wuyang":0,"Zarya":-10,"Zenyatta":-10},"D.Va":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":-10,"Bastion":10,"Brigitte":10,"Cassidy":0,"D.Va":-10,"Domina":0,"Doomfist":10,"Echo":10,"Emre":10,"Freja":0,"Genji":0,"Hanzo":10,"Hazard":10,"Illari":-10,"Jetpack Cat":10,"Junker Queen":-10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":-20,"Mauga":0,"Mei":-10,"Mercy":0,"Mizuki":10,"Moira":0,"Orisa":20,"Pharah":10,"Ramattra":0,"Reaper":0,"Reinhardt":-10,"Roadhog":10,"Shion":20,"Sierra":-10,"Sigma":10,"Sojourn":10,"Soldier: 76":10,"Sombra":-20,"Symmetra":10,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":10,"Venture":-10,"Widowmaker":0,"Winston":10,"Wrecking Ball":0,"Wuyang":0,"Zarya":-10,"Zenyatta":-10},"Domina":{"Ana":0,"Anran":0,"Ashe":0,"Baptiste":20,"Bastion":20,"Brigitte":0,"Cassidy":-10,"D.Va":0,"Domina":0,"Doomfist":0,"Echo":-10,"Emre":0,"Freja":-10,"Genji":10,"Hanzo":-10,"Hazard":0,"Illari":-20,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":0,"Juno":0,"Kiriko":10,"Lifeweaver":0,"L\u00facio":0,"Mauga":10,"Mei":-10,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":10,"Pharah":20,"Ramattra":0,"Reaper":-10,"Reinhardt":10,"Roadhog":0,"Shion":0,"Sierra":0,"Sigma":0,"Sojourn":-10,"Soldier: 76":10,"Sombra":10,"Symmetra":-10,"Torbj\u00f6rn":-20,"Tracer":-10,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":0,"Wrecking Ball":0,"Wuyang":0,"Zarya":20,"Zenyatta":-20},"Doomfist":{"Ana":0,"Anran":10,"Ashe":0,"Baptiste":10,"Bastion":-20,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":20,"Doomfist":0,"Echo":20,"Emre":-10,"Freja":-20,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":0,"Jetpack Cat":-20,"Junker Queen":-20,"Junkrat":-10,"Juno":10,"Kiriko":0,"Lifeweaver":-20,"L\u00facio":-10,"Mauga":-20,"Mei":10,"Mercy":10,"Mizuki":0,"Moira":-10,"Orisa":10,"Pharah":0,"Ramattra":10,"Reaper":-10,"Reinhardt":10,"Roadhog":0,"Shion":-10,"Sierra":-10,"Sigma":0,"Sojourn":20,"Soldier: 76":10,"Sombra":20,"Symmetra":10,"Torbj\u00f6rn":-10,"Tracer":-20,"Vendetta":10,"Venture":-20,"Widowmaker":0,"Winston":0,"Wrecking Ball":-10,"Wuyang":10,"Zarya":0,"Zenyatta":-10},"Echo":{"Ana":-10,"Anran":0,"Ashe":10,"Baptiste":0,"Bastion":10,"Brigitte":0,"Cassidy":-10,"D.Va":0,"Domina":0,"Doomfist":-20,"Echo":0,"Emre":0,"Freja":-10,"Genji":-10,"Hanzo":0,"Hazard":10,"Illari":0,"Jetpack Cat":20,"Junker Queen":10,"Junkrat":0,"Juno":-10,"Kiriko":0,"Lifeweaver":0,"L\u00facio":20,"Mauga":-10,"Mei":-10,"Mercy":-10,"Mizuki":0,"Moira":0,"Orisa":0,"Pharah":-10,"Ramattra":10,"Reaper":-10,"Reinhardt":-20,"Roadhog":0,"Shion":0,"Sierra":-20,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":20,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":-10,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":0,"Wrecking Ball":-10,"Wuyang":-10,"Zarya":0,"Zenyatta":-10},"Emre":{"Ana":10,"Anran":-10,"Ashe":-10,"Baptiste":-20,"Bastion":10,"Brigitte":10,"Cassidy":10,"D.Va":0,"Domina":10,"Doomfist":10,"Echo":10,"Emre":0,"Freja":0,"Genji":10,"Hanzo":0,"Hazard":0,"Illari":0,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":-10,"Juno":-10,"Kiriko":10,"Lifeweaver":20,"L\u00facio":-10,"Mauga":10,"Mei":-10,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":0,"Pharah":-10,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":10,"Shion":0,"Sierra":0,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":0,"Wrecking Ball":10,"Wuyang":10,"Zarya":-20,"Zenyatta":-10},"Freja":{"Ana":10,"Anran":20,"Ashe":-10,"Baptiste":-10,"Bastion":0,"Brigitte":-10,"Cassidy":0,"D.Va":10,"Domina":0,"Doomfist":0,"Echo":0,"Emre":0,"Freja":0,"Genji":0,"Hanzo":-10,"Hazard":10,"Illari":-20,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":0,"Juno":10,"Kiriko":10,"Lifeweaver":10,"L\u00facio":-20,"Mauga":-10,"Mei":10,"Mercy":-20,"Mizuki":-10,"Moira":-10,"Orisa":0,"Pharah":0,"Ramattra":0,"Reaper":-20,"Reinhardt":-10,"Roadhog":-10,"Shion":0,"Sierra":0,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":20,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":0,"Vendetta":10,"Venture":0,"Widowmaker":0,"Winston":0,"Wrecking Ball":0,"Wuyang":10,"Zarya":0,"Zenyatta":20},"Genji":{"Ana":10,"Anran":0,"Ashe":-10,"Baptiste":10,"Bastion":0,"Brigitte":10,"Cassidy":0,"D.Va":-10,"Domina":10,"Doomfist":-10,"Echo":0,"Emre":0,"Freja":0,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":0,"Jetpack Cat":10,"Junker Queen":20,"Junkrat":10,"Juno":-10,"Kiriko":10,"Lifeweaver":0,"L\u00facio":-10,"Mauga":-10,"Mei":0,"Mercy":-10,"Mizuki":0,"Moira":0,"Orisa":0,"Pharah":-10,"Ramattra":10,"Reaper":-10,"Reinhardt":10,"Roadhog":10,"Shion":10,"Sierra":0,"Sigma":0,"Sojourn":-10,"Soldier: 76":10,"Sombra":-10,"Symmetra":20,"Torbj\u00f6rn":10,"Tracer":-10,"Vendetta":0,"Venture":20,"Widowmaker":10,"Winston":0,"Wrecking Ball":-10,"Wuyang":10,"Zarya":-10,"Zenyatta":-10},"Hanzo":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":-10,"Bastion":-10,"Brigitte":20,"Cassidy":0,"D.Va":0,"Domina":-10,"Doomfist":0,"Echo":20,"Emre":0,"Freja":0,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":-10,"Jetpack Cat":10,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":0,"Mei":20,"Mercy":0,"Mizuki":0,"Moira":10,"Orisa":10,"Pharah":10,"Ramattra":-20,"Reaper":10,"Reinhardt":-10,"Roadhog":10,"Shion":-10,"Sierra":-10,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":10,"Symmetra":-10,"Torbj\u00f6rn":10,"Tracer":10,"Vendetta":0,"Venture":0,"Widowmaker":0,"Winston":0,"Wrecking Ball":0,"Wuyang":10,"Zarya":0,"Zenyatta":0},"Hazard":{"Ana":-10,"Anran":0,"Ashe":10,"Baptiste":10,"Bastion":10,"Brigitte":0,"Cassidy":0,"D.Va":-10,"Domina":10,"Doomfist":0,"Echo":0,"Emre":-10,"Freja":-10,"Genji":10,"Hanzo":10,"Hazard":-10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":10,"Junkrat":-10,"Juno":10,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":-10,"Mei":0,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":20,"Pharah":-10,"Ramattra":10,"Reaper":-10,"Reinhardt":-10,"Roadhog":-10,"Shion":-10,"Sierra":0,"Sigma":10,"Sojourn":10,"Soldier: 76":0,"Sombra":0,"Symmetra":20,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":0,"Venture":0,"Widowmaker":10,"Winston":0,"Wrecking Ball":0,"Wuyang":0,"Zarya":-20,"Zenyatta":0},"Illari":{"Ana":0,"Anran":10,"Ashe":-10,"Baptiste":20,"Bastion":-10,"Brigitte":10,"Cassidy":0,"D.Va":10,"Domina":10,"Doomfist":0,"Echo":0,"Emre":-10,"Freja":10,"Genji":-10,"Hanzo":10,"Hazard":-10,"Illari":-10,"Jetpack Cat":-20,"Junker Queen":-10,"Junkrat":20,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":10,"Mauga":0,"Mei":10,"Mercy":0,"Mizuki":0,"Moira":10,"Orisa":0,"Pharah":-10,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":-10,"Shion":-10,"Sierra":-10,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":0,"Symmetra":-10,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":0,"Venture":-20,"Widowmaker":0,"Winston":-10,"Wrecking Ball":10,"Wuyang":-20,"Zarya":0,"Zenyatta":-20},"Jetpack Cat":{"Ana":0,"Anran":0,"Ashe":-10,"Baptiste":0,"Bastion":0,"Brigitte":0,"Cassidy":10,"D.Va":-10,"Domina":20,"Doomfist":-10,"Echo":-20,"Emre":0,"Freja":10,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":0,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":-10,"Lifeweaver":-10,"L\u00facio":-20,"Mauga":-20,"Mei":10,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":0,"Pharah":10,"Ramattra":0,"Reaper":-10,"Reinhardt":10,"Roadhog":0,"Shion":-10,"Sierra":20,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":10,"Symmetra":-20,"Torbj\u00f6rn":10,"Tracer":10,"Vendetta":-10,"Venture":10,"Widowmaker":10,"Winston":10,"Wrecking Ball":0,"Wuyang":20,"Zarya":-10,"Zenyatta":0},"Junker Queen":{"Ana":10,"Anran":0,"Ashe":0,"Baptiste":0,"Bastion":10,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":-10,"Doomfist":0,"Echo":-10,"Emre":10,"Freja":10,"Genji":-20,"Hanzo":10,"Hazard":-10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":-20,"Juno":0,"Kiriko":10,"Lifeweaver":0,"L\u00facio":0,"Mauga":10,"Mei":0,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":0,"Pharah":10,"Ramattra":-10,"Reaper":-10,"Reinhardt":-10,"Roadhog":0,"Shion":0,"Sierra":10,"Sigma":-20,"Sojourn":10,"Soldier: 76":10,"Sombra":0,"Symmetra":-10,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":-10,"Venture":-20,"Widowmaker":20,"Winston":-20,"Wrecking Ball":10,"Wuyang":20,"Zarya":-10,"Zenyatta":-20},"Junkrat":{"Ana":0,"Anran":20,"Ashe":-10,"Baptiste":10,"Bastion":-10,"Brigitte":20,"Cassidy":10,"D.Va":-10,"Domina":10,"Doomfist":20,"Echo":0,"Emre":10,"Freja":-10,"Genji":0,"Hanzo":0,"Hazard":10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":20,"Junkrat":0,"Juno":-10,"Kiriko":0,"Lifeweaver":10,"L\u00facio":10,"Mauga":-10,"Mei":-10,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":10,"Pharah":10,"Ramattra":0,"Reaper":10,"Reinhardt":-10,"Roadhog":0,"Shion":10,"Sierra":10,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":-10,"Tracer":20,"Vendetta":-10,"Venture":0,"Widowmaker":-10,"Winston":10,"Wrecking Ball":0,"Wuyang":10,"Zarya":0,"Zenyatta":-10},"Juno":{"Ana":0,"Anran":10,"Ashe":0,"Baptiste":10,"Bastion":0,"Brigitte":10,"Cassidy":-10,"D.Va":0,"Domina":-10,"Doomfist":0,"Echo":20,"Emre":0,"Freja":-20,"Genji":0,"Hanzo":0,"Hazard":0,"Illari":0,"Jetpack Cat":0,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":20,"L\u00facio":-20,"Mauga":0,"Mei":-10,"Mercy":-10,"Mizuki":-10,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":0,"Shion":20,"Sierra":-10,"Sigma":10,"Sojourn":-10,"Soldier: 76":0,"Sombra":-10,"Symmetra":-10,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":0,"Venture":-20,"Widowmaker":0,"Winston":-10,"Wrecking Ball":0,"Wuyang":-10,"Zarya":10,"Zenyatta":0},"Kiriko":{"Ana":0,"Anran":-10,"Ashe":0,"Baptiste":-10,"Bastion":-10,"Brigitte":10,"Cassidy":0,"D.Va":-10,"Domina":0,"Doomfist":0,"Echo":10,"Emre":0,"Freja":0,"Genji":0,"Hanzo":0,"Hazard":0,"Illari":10,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":-20,"Mauga":0,"Mei":-10,"Mercy":-10,"Mizuki":10,"Moira":0,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":0,"Shion":-10,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":10,"Torbj\u00f6rn":-10,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":-10,"Winston":0,"Wrecking Ball":10,"Wuyang":0,"Zarya":-10,"Zenyatta":0},"Lifeweaver":{"Ana":10,"Anran":-10,"Ashe":-20,"Baptiste":-20,"Bastion":10,"Brigitte":0,"Cassidy":0,"D.Va":-20,"Domina":10,"Doomfist":10,"Echo":0,"Emre":-10,"Freja":-10,"Genji":-10,"Hanzo":10,"Hazard":10,"Illari":-10,"Jetpack Cat":10,"Junker Queen":-10,"Junkrat":-20,"Juno":-20,"Kiriko":0,"Lifeweaver":0,"L\u00facio":20,"Mauga":0,"Mei":10,"Mercy":0,"Mizuki":-10,"Moira":0,"Orisa":-10,"Pharah":-20,"Ramattra":10,"Reaper":10,"Reinhardt":0,"Roadhog":-10,"Shion":10,"Sierra":0,"Sigma":-10,"Sojourn":-10,"Soldier: 76":10,"Sombra":10,"Symmetra":10,"Torbj\u00f6rn":-10,"Tracer":-20,"Vendetta":10,"Venture":-10,"Widowmaker":-10,"Winston":-10,"Wrecking Ball":-10,"Wuyang":10,"Zarya":-20,"Zenyatta":0},"L\u00facio":{"Ana":0,"Anran":0,"Ashe":0,"Baptiste":0,"Bastion":10,"Brigitte":0,"Cassidy":0,"D.Va":0,"Domina":10,"Doomfist":-10,"Echo":-10,"Emre":0,"Freja":-10,"Genji":-10,"Hanzo":10,"Hazard":0,"Illari":-10,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":0,"Mauga":-20,"Mei":-10,"Mercy":0,"Mizuki":-10,"Moira":0,"Orisa":10,"Pharah":20,"Ramattra":0,"Reaper":0,"Reinhardt":-10,"Roadhog":0,"Shion":0,"Sierra":-10,"Sigma":0,"Sojourn":-10,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":-10,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":10,"Wrecking Ball":-10,"Wuyang":0,"Zarya":-10,"Zenyatta":0},"Mauga":{"Ana":10,"Anran":-10,"Ashe":-10,"Baptiste":-10,"Bastion":10,"Brigitte":-10,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":-10,"Echo":10,"Emre":0,"Freja":10,"Genji":0,"Hanzo":10,"Hazard":0,"Illari":0,"Jetpack Cat":10,"Junker Queen":-10,"Junkrat":20,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":10,"Mauga":0,"Mei":-10,"Mercy":0,"Mizuki":0,"Moira":0,"Orisa":20,"Pharah":-20,"Ramattra":10,"Reaper":0,"Reinhardt":-10,"Roadhog":10,"Shion":0,"Sierra":-10,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":-20,"Torbj\u00f6rn":10,"Tracer":-10,"Vendetta":-10,"Venture":0,"Widowmaker":-10,"Winston":0,"Wrecking Ball":-20,"Wuyang":-20,"Zarya":0,"Zenyatta":0},"Mei":{"Ana":0,"Anran":0,"Ashe":-10,"Baptiste":20,"Bastion":10,"Brigitte":-10,"Cassidy":-10,"D.Va":0,"Domina":10,"Doomfist":0,"Echo":20,"Emre":-10,"Freja":-10,"Genji":-10,"Hanzo":-10,"Hazard":10,"Illari":-10,"Jetpack Cat":-10,"Junker Queen":10,"Junkrat":10,"Juno":10,"Kiriko":0,"Lifeweaver":0,"L\u00facio":0,"Mauga":10,"Mei":0,"Mercy":-20,"Mizuki":0,"Moira":-10,"Orisa":-10,"Pharah":10,"Ramattra":0,"Reaper":10,"Reinhardt":-10,"Roadhog":-20,"Shion":0,"Sierra":0,"Sigma":-10,"Sojourn":-10,"Soldier: 76":0,"Sombra":10,"Symmetra":-10,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":-10,"Venture":0,"Widowmaker":0,"Winston":-10,"Wrecking Ball":-10,"Wuyang":-20,"Zarya":10,"Zenyatta":-10},"Mercy":{"Ana":0,"Anran":0,"Ashe":0,"Baptiste":10,"Bastion":-10,"Brigitte":-10,"Cassidy":10,"D.Va":-10,"Domina":-20,"Doomfist":-10,"Echo":10,"Emre":10,"Freja":10,"Genji":10,"Hanzo":10,"Hazard":0,"Illari":0,"Jetpack Cat":20,"Junker Queen":-10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":0,"Mauga":0,"Mei":10,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":0,"Pharah":0,"Ramattra":0,"Reaper":-10,"Reinhardt":10,"Roadhog":10,"Shion":10,"Sierra":20,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":10,"Venture":-10,"Widowmaker":20,"Winston":0,"Wrecking Ball":10,"Wuyang":10,"Zarya":-20,"Zenyatta":0},"Mizuki":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":0,"Bastion":20,"Brigitte":10,"Cassidy":0,"D.Va":-10,"Domina":10,"Doomfist":-20,"Echo":-10,"Emre":0,"Freja":10,"Genji":0,"Hanzo":0,"Hazard":10,"Illari":-10,"Jetpack Cat":20,"Junker Queen":0,"Junkrat":-10,"Juno":-10,"Kiriko":0,"Lifeweaver":20,"L\u00facio":0,"Mauga":10,"Mei":-10,"Mercy":0,"Mizuki":0,"Moira":0,"Orisa":20,"Pharah":20,"Ramattra":-10,"Reaper":0,"Reinhardt":0,"Roadhog":-10,"Shion":-10,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":-10,"Venture":0,"Widowmaker":20,"Winston":0,"Wrecking Ball":-20,"Wuyang":10,"Zarya":-10,"Zenyatta":-10},"Moira":{"Ana":10,"Anran":0,"Ashe":0,"Baptiste":-10,"Bastion":10,"Brigitte":10,"Cassidy":10,"D.Va":-10,"Domina":0,"Doomfist":0,"Echo":0,"Emre":10,"Freja":10,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":-10,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":-10,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":10,"Mauga":10,"Mei":10,"Mercy":0,"Mizuki":10,"Moira":0,"Orisa":0,"Pharah":0,"Ramattra":0,"Reaper":10,"Reinhardt":10,"Roadhog":0,"Shion":-10,"Sierra":0,"Sigma":-10,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":-20,"Tracer":-10,"Vendetta":-10,"Venture":-10,"Widowmaker":0,"Winston":10,"Wrecking Ball":-10,"Wuyang":10,"Zarya":-10,"Zenyatta":-10},"Orisa":{"Ana":0,"Anran":-20,"Ashe":0,"Baptiste":10,"Bastion":0,"Brigitte":10,"Cassidy":10,"D.Va":-10,"Domina":0,"Doomfist":-20,"Echo":10,"Emre":10,"Freja":-10,"Genji":10,"Hanzo":0,"Hazard":-10,"Illari":10,"Jetpack Cat":10,"Junker Queen":-10,"Junkrat":0,"Juno":-10,"Kiriko":10,"Lifeweaver":0,"L\u00facio":-10,"Mauga":0,"Mei":10,"Mercy":10,"Mizuki":-10,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":-10,"Reaper":-10,"Reinhardt":20,"Roadhog":0,"Shion":10,"Sierra":0,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":10,"Vendetta":-20,"Venture":-10,"Widowmaker":0,"Winston":10,"Wrecking Ball":10,"Wuyang":-10,"Zarya":0,"Zenyatta":-10},"Pharah":{"Ana":10,"Anran":10,"Ashe":0,"Baptiste":10,"Bastion":0,"Brigitte":-20,"Cassidy":10,"D.Va":0,"Domina":-10,"Doomfist":-10,"Echo":10,"Emre":20,"Freja":0,"Genji":10,"Hanzo":0,"Hazard":20,"Illari":10,"Jetpack Cat":-10,"Junker Queen":-10,"Junkrat":0,"Juno":10,"Kiriko":10,"Lifeweaver":0,"L\u00facio":-20,"Mauga":20,"Mei":0,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":0,"Pharah":0,"Ramattra":10,"Reaper":0,"Reinhardt":10,"Roadhog":20,"Shion":-20,"Sierra":0,"Sigma":0,"Sojourn":-20,"Soldier: 76":10,"Sombra":-10,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":0,"Vendetta":-10,"Venture":-10,"Widowmaker":0,"Winston":0,"Wrecking Ball":-20,"Wuyang":-10,"Zarya":-10,"Zenyatta":0},"Ramattra":{"Ana":10,"Anran":0,"Ashe":-10,"Baptiste":10,"Bastion":10,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":0,"Echo":-10,"Emre":10,"Freja":0,"Genji":0,"Hanzo":10,"Hazard":0,"Illari":10,"Jetpack Cat":20,"Junker Queen":10,"Junkrat":0,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":-10,"Mauga":10,"Mei":-10,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":-10,"Reinhardt":10,"Roadhog":20,"Shion":20,"Sierra":-10,"Sigma":-10,"Sojourn":20,"Soldier: 76":10,"Sombra":10,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":10,"Vendetta":-20,"Venture":0,"Widowmaker":10,"Winston":0,"Wrecking Ball":0,"Wuyang":-10,"Zarya":0,"Zenyatta":0},"Reaper":{"Ana":-10,"Anran":-20,"Ashe":0,"Baptiste":0,"Bastion":10,"Brigitte":20,"Cassidy":0,"D.Va":-10,"Domina":20,"Doomfist":-10,"Echo":-10,"Emre":-10,"Freja":20,"Genji":10,"Hanzo":0,"Hazard":-10,"Illari":0,"Jetpack Cat":0,"Junker Queen":-10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":-10,"Mauga":0,"Mei":0,"Mercy":10,"Mizuki":-10,"Moira":-10,"Orisa":10,"Pharah":10,"Ramattra":0,"Reaper":10,"Reinhardt":10,"Roadhog":10,"Shion":0,"Sierra":0,"Sigma":-10,"Sojourn":0,"Soldier: 76":10,"Sombra":-10,"Symmetra":-10,"Torbj\u00f6rn":-10,"Tracer":-10,"Vendetta":-10,"Venture":-10,"Widowmaker":-10,"Winston":-20,"Wrecking Ball":0,"Wuyang":10,"Zarya":-10,"Zenyatta":0},"Reinhardt":{"Ana":0,"Anran":10,"Ashe":-10,"Baptiste":0,"Bastion":0,"Brigitte":10,"Cassidy":0,"D.Va":10,"Domina":0,"Doomfist":0,"Echo":20,"Emre":0,"Freja":-20,"Genji":0,"Hanzo":0,"Hazard":10,"Illari":10,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":0,"Mauga":10,"Mei":10,"Mercy":0,"Mizuki":0,"Moira":0,"Orisa":-20,"Pharah":10,"Ramattra":0,"Reaper":0,"Reinhardt":0,"Roadhog":20,"Shion":10,"Sierra":10,"Sigma":10,"Sojourn":0,"Soldier: 76":-10,"Sombra":0,"Symmetra":10,"Torbj\u00f6rn":-10,"Tracer":0,"Vendetta":0,"Venture":0,"Widowmaker":10,"Winston":20,"Wrecking Ball":-20,"Wuyang":0,"Zarya":-20,"Zenyatta":0},"Roadhog":{"Ana":0,"Anran":0,"Ashe":10,"Baptiste":10,"Bastion":-10,"Brigitte":0,"Cassidy":0,"D.Va":-10,"Domina":10,"Doomfist":0,"Echo":0,"Emre":0,"Freja":20,"Genji":10,"Hanzo":-10,"Hazard":10,"Illari":0,"Jetpack Cat":0,"Junker Queen":10,"Junkrat":0,"Juno":-10,"Kiriko":0,"Lifeweaver":20,"L\u00facio":-10,"Mauga":0,"Mei":-10,"Mercy":-10,"Mizuki":20,"Moira":0,"Orisa":10,"Pharah":-10,"Ramattra":-10,"Reaper":-10,"Reinhardt":0,"Roadhog":0,"Shion":-10,"Sierra":10,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":-10,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":20,"Vendetta":10,"Venture":0,"Widowmaker":0,"Winston":10,"Wrecking Ball":-10,"Wuyang":10,"Zarya":0,"Zenyatta":10},"Shion":{"Ana":-10,"Anran":10,"Ashe":-10,"Baptiste":0,"Bastion":-10,"Brigitte":20,"Cassidy":0,"D.Va":-10,"Domina":0,"Doomfist":10,"Echo":0,"Emre":10,"Freja":0,"Genji":0,"Hanzo":10,"Hazard":-10,"Illari":10,"Jetpack Cat":10,"Junker Queen":20,"Junkrat":-10,"Juno":-20,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":0,"Mei":0,"Mercy":0,"Mizuki":10,"Moira":0,"Orisa":0,"Pharah":20,"Ramattra":0,"Reaper":-20,"Reinhardt":-10,"Roadhog":10,"Shion":0,"Sierra":10,"Sigma":-10,"Sojourn":-10,"Soldier: 76":20,"Sombra":-10,"Symmetra":20,"Torbj\u00f6rn":20,"Tracer":-10,"Vendetta":0,"Venture":0,"Widowmaker":-10,"Winston":10,"Wrecking Ball":-10,"Wuyang":0,"Zarya":-10,"Zenyatta":-20},"Sierra":{"Ana":0,"Anran":0,"Ashe":-10,"Baptiste":0,"Bastion":10,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":10,"Doomfist":-10,"Echo":-10,"Emre":0,"Freja":0,"Genji":10,"Hanzo":0,"Hazard":-10,"Illari":10,"Jetpack Cat":-10,"Junker Queen":-20,"Junkrat":0,"Juno":0,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":20,"Mauga":10,"Mei":0,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":20,"Reaper":10,"Reinhardt":0,"Roadhog":0,"Shion":10,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":10,"Sombra":0,"Symmetra":10,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":0,"Venture":0,"Widowmaker":0,"Winston":20,"Wrecking Ball":0,"Wuyang":-10,"Zarya":-10,"Zenyatta":10},"Sigma":{"Ana":10,"Anran":0,"Ashe":0,"Baptiste":10,"Bastion":-10,"Brigitte":-10,"Cassidy":10,"D.Va":-10,"Domina":10,"Doomfist":0,"Echo":-10,"Emre":0,"Freja":10,"Genji":0,"Hanzo":10,"Hazard":0,"Illari":0,"Jetpack Cat":10,"Junker Queen":20,"Junkrat":0,"Juno":0,"Kiriko":0,"Lifeweaver":20,"L\u00facio":-10,"Mauga":0,"Mei":0,"Mercy":-10,"Mizuki":0,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":10,"Reinhardt":0,"Roadhog":0,"Shion":0,"Sierra":20,"Sigma":0,"Sojourn":0,"Soldier: 76":-10,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":-10,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":10,"Wrecking Ball":10,"Wuyang":10,"Zarya":10,"Zenyatta":-10},"Sojourn":{"Ana":0,"Anran":-10,"Ashe":0,"Baptiste":-10,"Bastion":0,"Brigitte":0,"Cassidy":0,"D.Va":-10,"Domina":10,"Doomfist":-10,"Echo":-20,"Emre":0,"Freja":10,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":0,"Junkrat":0,"Juno":-10,"Kiriko":0,"Lifeweaver":10,"L\u00facio":10,"Mauga":0,"Mei":0,"Mercy":10,"Mizuki":-10,"Moira":0,"Orisa":10,"Pharah":0,"Ramattra":-10,"Reaper":0,"Reinhardt":10,"Roadhog":0,"Shion":20,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":-20,"Venture":0,"Widowmaker":-10,"Winston":0,"Wrecking Ball":-10,"Wuyang":0,"Zarya":-10,"Zenyatta":10},"Soldier: 76":{"Ana":10,"Anran":-10,"Ashe":0,"Baptiste":20,"Bastion":10,"Brigitte":0,"Cassidy":10,"D.Va":-10,"Domina":0,"Doomfist":-10,"Echo":10,"Emre":-10,"Freja":-10,"Genji":-10,"Hanzo":0,"Hazard":0,"Illari":0,"Jetpack Cat":0,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":10,"L\u00facio":-10,"Mauga":0,"Mei":0,"Mercy":0,"Mizuki":-10,"Moira":10,"Orisa":10,"Pharah":-10,"Ramattra":-20,"Reaper":0,"Reinhardt":20,"Roadhog":10,"Shion":-10,"Sierra":-10,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":-10,"Vendetta":-10,"Venture":0,"Widowmaker":10,"Winston":10,"Wrecking Ball":0,"Wuyang":0,"Zarya":0,"Zenyatta":-10},"Sombra":{"Ana":10,"Anran":10,"Ashe":0,"Baptiste":10,"Bastion":0,"Brigitte":10,"Cassidy":20,"D.Va":10,"Domina":0,"Doomfist":-20,"Echo":-10,"Emre":10,"Freja":-10,"Genji":10,"Hanzo":0,"Hazard":0,"Illari":10,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":10,"Juno":-10,"Kiriko":0,"Lifeweaver":0,"L\u00facio":-10,"Mauga":-10,"Mei":-10,"Mercy":0,"Mizuki":-10,"Moira":-10,"Orisa":10,"Pharah":10,"Ramattra":-10,"Reaper":10,"Reinhardt":10,"Roadhog":10,"Shion":20,"Sierra":10,"Sigma":0,"Sojourn":0,"Soldier: 76":-10,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":0,"Vendetta":0,"Venture":0,"Widowmaker":-20,"Winston":-10,"Wrecking Ball":0,"Wuyang":0,"Zarya":-10,"Zenyatta":10},"Symmetra":{"Ana":-10,"Anran":10,"Ashe":-10,"Baptiste":20,"Bastion":-10,"Brigitte":0,"Cassidy":-10,"D.Va":-10,"Domina":0,"Doomfist":10,"Echo":0,"Emre":0,"Freja":10,"Genji":-10,"Hanzo":10,"Hazard":0,"Illari":10,"Jetpack Cat":10,"Junker Queen":10,"Junkrat":0,"Juno":20,"Kiriko":0,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":10,"Mei":10,"Mercy":10,"Mizuki":0,"Moira":-10,"Orisa":0,"Pharah":10,"Ramattra":0,"Reaper":10,"Reinhardt":0,"Roadhog":0,"Shion":-10,"Sierra":10,"Sigma":-10,"Sojourn":-10,"Soldier: 76":-10,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":-20,"Tracer":10,"Vendetta":10,"Venture":-10,"Widowmaker":10,"Winston":0,"Wrecking Ball":-20,"Wuyang":0,"Zarya":0,"Zenyatta":-10},"Torbj\u00f6rn":{"Ana":-10,"Anran":-10,"Ashe":10,"Baptiste":-10,"Bastion":0,"Brigitte":0,"Cassidy":0,"D.Va":0,"Domina":20,"Doomfist":0,"Echo":0,"Emre":-10,"Freja":0,"Genji":-10,"Hanzo":20,"Hazard":-10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":0,"Junkrat":0,"Juno":-10,"Kiriko":10,"Lifeweaver":10,"L\u00facio":0,"Mauga":0,"Mei":0,"Mercy":0,"Mizuki":0,"Moira":20,"Orisa":20,"Pharah":20,"Ramattra":-10,"Reaper":0,"Reinhardt":10,"Roadhog":0,"Shion":-10,"Sierra":20,"Sigma":10,"Sojourn":10,"Soldier: 76":0,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":0,"Winston":-10,"Wrecking Ball":20,"Wuyang":20,"Zarya":-10,"Zenyatta":0},"Tracer":{"Ana":0,"Anran":-10,"Ashe":0,"Baptiste":10,"Bastion":-10,"Brigitte":0,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":0,"Echo":20,"Emre":10,"Freja":-10,"Genji":-10,"Hanzo":0,"Hazard":-10,"Illari":-10,"Jetpack Cat":-10,"Junker Queen":-20,"Junkrat":-10,"Juno":0,"Kiriko":10,"Lifeweaver":10,"L\u00facio":10,"Mauga":0,"Mei":-10,"Mercy":-10,"Mizuki":-10,"Moira":0,"Orisa":0,"Pharah":10,"Ramattra":-10,"Reaper":0,"Reinhardt":10,"Roadhog":-10,"Shion":10,"Sierra":10,"Sigma":0,"Sojourn":-10,"Soldier: 76":10,"Sombra":0,"Symmetra":-10,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":10,"Venture":0,"Widowmaker":10,"Winston":10,"Wrecking Ball":-20,"Wuyang":-10,"Zarya":-10,"Zenyatta":-10},"Vendetta":{"Ana":10,"Anran":0,"Ashe":0,"Baptiste":-10,"Bastion":0,"Brigitte":10,"Cassidy":-10,"D.Va":-10,"Domina":0,"Doomfist":0,"Echo":0,"Emre":0,"Freja":0,"Genji":10,"Hanzo":0,"Hazard":0,"Illari":20,"Jetpack Cat":10,"Junker Queen":10,"Junkrat":-10,"Juno":0,"Kiriko":-10,"Lifeweaver":-10,"L\u00facio":0,"Mauga":0,"Mei":-10,"Mercy":0,"Mizuki":20,"Moira":10,"Orisa":20,"Pharah":10,"Ramattra":-10,"Reaper":0,"Reinhardt":-20,"Roadhog":-10,"Shion":0,"Sierra":0,"Sigma":10,"Sojourn":20,"Soldier: 76":-10,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":0,"Vendetta":0,"Venture":0,"Widowmaker":-20,"Winston":20,"Wrecking Ball":10,"Wuyang":20,"Zarya":0,"Zenyatta":-10},"Venture":{"Ana":-10,"Anran":20,"Ashe":20,"Baptiste":10,"Bastion":10,"Brigitte":-10,"Cassidy":-10,"D.Va":0,"Domina":0,"Doomfist":20,"Echo":-20,"Emre":0,"Freja":10,"Genji":-20,"Hanzo":10,"Hazard":-10,"Illari":10,"Jetpack Cat":-20,"Junker Queen":10,"Junkrat":0,"Juno":10,"Kiriko":-10,"Lifeweaver":10,"L\u00facio":0,"Mauga":0,"Mei":10,"Mercy":0,"Mizuki":20,"Moira":10,"Orisa":10,"Pharah":0,"Ramattra":10,"Reaper":10,"Reinhardt":0,"Roadhog":-20,"Shion":0,"Sierra":20,"Sigma":0,"Sojourn":-10,"Soldier: 76":0,"Sombra":10,"Symmetra":10,"Torbj\u00f6rn":10,"Tracer":0,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":10,"Wrecking Ball":-20,"Wuyang":-20,"Zarya":10,"Zenyatta":10},"Widowmaker":{"Ana":10,"Anran":0,"Ashe":-10,"Baptiste":-20,"Bastion":0,"Brigitte":0,"Cassidy":0,"D.Va":10,"Domina":-10,"Doomfist":-10,"Echo":0,"Emre":0,"Freja":10,"Genji":20,"Hanzo":10,"Hazard":-10,"Illari":10,"Jetpack Cat":-10,"Junker Queen":-10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":20,"L\u00facio":0,"Mauga":10,"Mei":10,"Mercy":-10,"Mizuki":0,"Moira":0,"Orisa":10,"Pharah":0,"Ramattra":0,"Reaper":0,"Reinhardt":-10,"Roadhog":10,"Shion":10,"Sierra":0,"Sigma":-10,"Sojourn":10,"Soldier: 76":0,"Sombra":-10,"Symmetra":-20,"Torbj\u00f6rn":10,"Tracer":0,"Vendetta":10,"Venture":0,"Widowmaker":-10,"Winston":-10,"Wrecking Ball":10,"Wuyang":10,"Zarya":-10,"Zenyatta":-20},"Winston":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":-10,"Bastion":10,"Brigitte":10,"Cassidy":0,"D.Va":0,"Domina":0,"Doomfist":10,"Echo":10,"Emre":0,"Freja":-10,"Genji":0,"Hanzo":0,"Hazard":-10,"Illari":0,"Jetpack Cat":0,"Junker Queen":10,"Junkrat":0,"Juno":10,"Kiriko":-10,"Lifeweaver":0,"L\u00facio":-10,"Mauga":10,"Mei":0,"Mercy":-10,"Mizuki":10,"Moira":10,"Orisa":0,"Pharah":0,"Ramattra":0,"Reaper":20,"Reinhardt":0,"Roadhog":-10,"Shion":-20,"Sierra":-10,"Sigma":0,"Sojourn":-10,"Soldier: 76":10,"Sombra":0,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":-10,"Vendetta":-10,"Venture":-10,"Widowmaker":0,"Winston":0,"Wrecking Ball":-10,"Wuyang":0,"Zarya":-10,"Zenyatta":0},"Wrecking Ball":{"Ana":0,"Anran":0,"Ashe":10,"Baptiste":10,"Bastion":-20,"Brigitte":0,"Cassidy":0,"D.Va":10,"Domina":0,"Doomfist":-10,"Echo":-10,"Emre":0,"Freja":10,"Genji":0,"Hanzo":10,"Hazard":-20,"Illari":10,"Jetpack Cat":-10,"Junker Queen":0,"Junkrat":10,"Juno":0,"Kiriko":-20,"Lifeweaver":0,"L\u00facio":-10,"Mauga":10,"Mei":0,"Mercy":-10,"Mizuki":10,"Moira":0,"Orisa":-10,"Pharah":-20,"Ramattra":0,"Reaper":-10,"Reinhardt":20,"Roadhog":-10,"Shion":-20,"Sierra":-10,"Sigma":10,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":10,"Torbj\u00f6rn":-20,"Tracer":-20,"Vendetta":0,"Venture":-10,"Widowmaker":0,"Winston":0,"Wrecking Ball":0,"Wuyang":-10,"Zarya":0,"Zenyatta":0},"Wuyang":{"Ana":0,"Anran":-10,"Ashe":-10,"Baptiste":-10,"Bastion":10,"Brigitte":20,"Cassidy":10,"D.Va":20,"Domina":10,"Doomfist":0,"Echo":10,"Emre":0,"Freja":10,"Genji":-10,"Hanzo":10,"Hazard":-10,"Illari":10,"Jetpack Cat":0,"Junker Queen":-20,"Junkrat":10,"Juno":-10,"Kiriko":0,"Lifeweaver":0,"L\u00facio":0,"Mauga":-10,"Mei":0,"Mercy":0,"Mizuki":0,"Moira":-10,"Orisa":0,"Pharah":10,"Ramattra":10,"Reaper":-20,"Reinhardt":20,"Roadhog":0,"Shion":0,"Sierra":0,"Sigma":0,"Sojourn":10,"Soldier: 76":0,"Sombra":0,"Symmetra":10,"Torbj\u00f6rn":-10,"Tracer":10,"Vendetta":-10,"Venture":10,"Widowmaker":0,"Winston":10,"Wrecking Ball":0,"Wuyang":-10,"Zarya":10,"Zenyatta":-10},"Zarya":{"Ana":10,"Anran":0,"Ashe":-10,"Baptiste":0,"Bastion":0,"Brigitte":20,"Cassidy":10,"D.Va":10,"Domina":0,"Doomfist":10,"Echo":10,"Emre":0,"Freja":20,"Genji":10,"Hanzo":0,"Hazard":10,"Illari":-10,"Jetpack Cat":0,"Junker Queen":10,"Junkrat":10,"Juno":0,"Kiriko":0,"Lifeweaver":0,"L\u00facio":10,"Mauga":0,"Mei":-10,"Mercy":0,"Mizuki":0,"Moira":10,"Orisa":0,"Pharah":20,"Ramattra":0,"Reaper":0,"Reinhardt":10,"Roadhog":10,"Shion":-10,"Sierra":0,"Sigma":0,"Sojourn":0,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":10,"Tracer":10,"Vendetta":0,"Venture":-10,"Widowmaker":10,"Winston":10,"Wrecking Ball":-10,"Wuyang":-10,"Zarya":-10,"Zenyatta":0},"Zenyatta":{"Ana":0,"Anran":-10,"Ashe":10,"Baptiste":0,"Bastion":0,"Brigitte":0,"Cassidy":0,"D.Va":0,"Domina":20,"Doomfist":10,"Echo":0,"Emre":0,"Freja":-10,"Genji":0,"Hanzo":-10,"Hazard":0,"Illari":0,"Jetpack Cat":-10,"Junker Queen":10,"Junkrat":0,"Juno":0,"Kiriko":10,"Lifeweaver":-10,"L\u00facio":-10,"Mauga":0,"Mei":10,"Mercy":0,"Mizuki":10,"Moira":0,"Orisa":0,"Pharah":10,"Ramattra":0,"Reaper":10,"Reinhardt":10,"Roadhog":0,"Shion":10,"Sierra":0,"Sigma":0,"Sojourn":-10,"Soldier: 76":0,"Sombra":10,"Symmetra":0,"Torbj\u00f6rn":0,"Tracer":10,"Vendetta":10,"Venture":-10,"Widowmaker":10,"Winston":-10,"Wrecking Ball":-10,"Wuyang":10,"Zarya":0,"Zenyatta":0}};
+const heroRoles = {"Ana":"Support","Anran":"Damage","Ashe":"Damage","Baptiste":"Support","Bastion":"Damage","Brigitte":"Support","Cassidy":"Damage","D.Va":"Tank","Domina":"Tank","Doomfist":"Tank","Echo":"Damage","Emre":"Damage","Freja":"Damage","Genji":"Damage","Hanzo":"Damage","Hazard":"Tank","Illari":"Support","Jetpack Cat":"Support","Junker Queen":"Tank","Junkrat":"Damage","Juno":"Support","Kiriko":"Support","Lifeweaver":"Support","L\u00facio":"Support","Mauga":"Tank","Mei":"Damage","Mercy":"Support","Mizuki":"Support","Moira":"Support","Orisa":"Tank","Pharah":"Damage","Ramattra":"Tank","Reaper":"Damage","Reinhardt":"Tank","Roadhog":"Tank","Sierra":"Damage","Sigma":"Tank","Shion":"Damage","Sojourn":"Damage","Soldier: 76":"Damage","Sombra":"Damage","Symmetra":"Damage","Torbj\u00f6rn":"Damage","Tracer":"Damage","Vendetta":"Damage","Venture":"Damage","Widowmaker":"Damage","Winston":"Tank","Wrecking Ball":"Tank","Wuyang":"Support","Zarya":"Tank","Zenyatta":"Support"};
+const HERO_JP = {"D.Va":"D.Va","Domina":"ドミナ","Doomfist":"ドゥームフィスト","Hazard":"ハザード","Junker Queen":"ジャンカー・クイーン","Mauga":"マウガ","Orisa":"オリーサ","Ramattra":"ラマットラ","Reinhardt":"ラインハルト","Roadhog":"ロードホッグ","Sigma":"シグマ","Winston":"ウィンストン","Wrecking Ball":"レッキング・ボール","Zarya":"ザリア","Anran":"アンラン","Ashe":"アッシュ","Bastion":"バスティオン","Cassidy":"キャスディ","Echo":"エコー","Emre":"エムレ","Freja":"フレイヤ","Genji":"ゲンジ","Hanzo":"ハンゾー","Junkrat":"ジャンクラット","Mei":"メイ","Pharah":"ファラ","Reaper":"リーパー","Shion":"シオン","Sierra":"シエラ","Sojourn":"ソジョーン","Soldier: 76":"ソルジャー76","Sombra":"ソンブラ","Symmetra":"シンメトラ","Torbjörn":"トールビョーン","Tracer":"トレーサー","Vendetta":"ヴェンデッタ","Venture":"ベンチャー","Widowmaker":"ウィドウメイカー","Ana":"アナ","Baptiste":"バティスト","Brigitte":"ブリギッテ","Illari":"イラリー","Jetpack Cat":"ジェットパック・キャット","Juno":"ジュノ","Kiriko":"キリコ","Lifeweaver":"ライフウィーバー","Lúcio":"ルシオ","Mercy":"マーシー","Mizuki":"ミズキ","Moira":"モイラ","Wuyang":"ウーヤン","Zenyatta":"ゼニヤッタ"};
+
+const ROLE = {
+  Tank:{key:"tank",jp:"タンク"},
+  Damage:{key:"damage",jp:"ダメージ"},
+  Support:{key:"support",jp:"サポート"}
+};
+const ALL = Object.keys(heroRoles).sort((a,b)=>a.localeCompare(b));
+const jp = n => HERO_JP[n] || n;
+
+function scoreClass(v){
+  if(v>=20) return "s20";
+  if(v>=10) return "s10";
+  if(v>0) return "s5";
+  if(v===0) return "s0";
+  if(v>=-10) return "sm10";
+  return "sm20";
+}
+function scoreText(v){ return (v>0?"+":"")+v; }
+
+let selected=null, roleFilter="all", query="";
+let detailRole="Tank", showEven=false;
+const $=s=>document.querySelector(s);
+const grid=$("#grid"), detail=$("#detail"), shown=$("#shown");
+
+const FILTERS=[["all","すべて"],["Tank","タンク"],["Damage","ダメージ"],["Support","サポート"]];
+const fWrap=$("#filters");
+FILTERS.forEach(([k,label])=>{
+  const b=document.createElement("button");
+  b.textContent=label; b.dataset.k=k;
+  b.onclick=()=>{roleFilter=k; renderFilters(); renderGrid();};
+  fWrap.appendChild(b);
+});
+function renderFilters(){
+  [...fWrap.children].forEach(b=>{
+    const on=b.dataset.k===roleFilter;
+    const cls={all:"all",Tank:"tank",Damage:"damage",Support:"support"}[b.dataset.k];
+    b.className = on ? "on "+cls : "";
+  });
+}
+
+function renderDetail(){
+  detail.innerHTML="";
+  if(!selected){
+    const h=document.createElement("div"); h.className="hint";
+    h.textContent="下の一覧からヒーローを選んでください。相性がここに表示されます。";
+    detail.appendChild(h); return;
+  }
+  const r=ROLE[heroRoles[selected]];
+  const box=document.createElement("div"); box.className="detail "+r.key;
+
+  const head=document.createElement("div"); head.className="dhead";
+  head.innerHTML='<span class="badge '+r.key+'">'+({Tank:"TANK",Damage:"DPS",Support:"SUP"}[heroRoles[selected]])+'</span>'+
+    '<span class="dname">'+jp(selected)+'</span><span class="den">'+selected+'</span>';
+  const close=document.createElement("button"); close.className="close"; close.textContent="閉じる";
+  close.onclick=()=>{selected=null; renderDetail(); renderGrid();};
+  head.appendChild(close);
+  box.appendChild(head);
+
+  const expl=document.createElement("div"); expl.className="dexpl";
+  expl.innerHTML='数値＝そのヒーローが <b>'+jp(selected)+'</b> に対してどれだけ有利か。<b style="color:#34d399">緑（＋）</b>＝'+jp(selected)+'に刺さる＝対策候補／<b style="color:#fb7185">赤（−）</b>＝'+jp(selected)+'が有利な相手。上ほど刺さります。ロールはタブで切替、互角(0)は既定で非表示です。';
+  box.appendChild(expl);
+
+  const legend=document.createElement("div"); legend.className="legend";
+  legend.innerHTML=
+    '<span><i class="lg s20">+20</i>ハードカウンター</span>'+
+    '<span><i class="lg s10">+10</i>有利</span>'+
+    '<span><i class="lg s0">0</i>互角</span>'+
+    '<span><i class="lg sm10">-10</i>不利</span>'+
+    '<span><i class="lg sm20">-20</i>非推奨</span>';
+  box.appendChild(legend);
+
+  // ロール切替タブ
+  const tabs=document.createElement("div"); tabs.className="dtabs";
+  ["Tank","Damage","Support"].forEach(role=>{
+    const rk=ROLE[role].key;
+    const tb=document.createElement("button");
+    tb.className="dtab "+rk+(detailRole===role?" on":"");
+    tb.innerHTML='<span class="dot" style="background:var(--'+rk+')"></span>'+ROLE[role].jp;
+    tb.onclick=()=>{ detailRole=role; renderDetail(); };
+    tabs.appendChild(tb);
+  });
+  box.appendChild(tabs);
+
+  // 互角(0)の表示トグル
+  const evtog=document.createElement("button");
+  evtog.className="evtog"+(showEven?" on":"");
+  evtog.textContent = showEven ? "互角(0)を隠す" : "互角(0)も表示";
+  evtog.onclick=()=>{ showEven=!showEven; renderDetail(); };
+  box.appendChild(evtog);
+
+  // 選択ロールのリスト（1ロールずつ）
+  const col=document.createElement("div"); col.className="col";
+  let rows=ALL.filter(h=>h!==selected && heroRoles[h]===detailRole)
+    .map(h=>({h, v:(counterMatrix[h] && counterMatrix[h][selected]!==undefined)?counterMatrix[h][selected]:0}))
+    .sort((a,b)=> b.v-a.v || a.h.localeCompare(b.h));
+  if(!showEven) rows=rows.filter(x=>x.v!==0);
+  if(rows.length===0){
+    const e=document.createElement("div"); e.className="empty2";
+    e.textContent = showEven ? "該当ヒーローがいません。" :
+      jp(selected)+" に対して明確な相性差のある"+ROLE[detailRole].jp+"は、この出典ではありません（「互角(0)も表示」で全件確認できます）。";
+    col.appendChild(e);
+  } else {
+    rows.forEach(({h,v})=>{
+      const row=document.createElement("div"); row.className="row";
+      const nm=document.createElement("span"); nm.className="rn"; nm.textContent=jp(h);
+      nm.title=jp(h)+" / "+h; nm.onclick=()=>pick(h);
+      const sc=document.createElement("span"); sc.className="sc "+scoreClass(v); sc.textContent=scoreText(v);
+      row.appendChild(nm); row.appendChild(sc); col.appendChild(row);
+    });
+  }
+  box.appendChild(col);
+  detail.appendChild(box);
+}
+
+function filteredHeroes(){
+  const q=query.trim().toLowerCase();
+  return ALL.filter(h=>{
+    const roleOk = roleFilter==="all" || heroRoles[h]===roleFilter;
+    const qOk = q==="" || h.toLowerCase().includes(q) || jp(h).toLowerCase().includes(q);
+    return roleOk && qOk;
+  });
+}
+function renderGrid(){
+  const list=filteredHeroes();
+  shown.textContent=list.length+" 表示";
+  grid.innerHTML="";
+  if(!list.length){
+    const e=document.createElement("div"); e.style.gridColumn="1 / -1"; e.style.color="var(--mut2)"; e.style.fontSize=".85rem";
+    e.textContent="該当するヒーローがいません。検索語かフィルターを変えてみてください。";
+    grid.appendChild(e); return;
+  }
+  list.forEach(h=>{
+    const rk=ROLE[heroRoles[h]].key; const active=selected===h;
+    const b=document.createElement("button");
+    b.className="hero "+rk+(active?" sel":"");
+    b.innerHTML='<span class="hdot '+rk+'"></span><span style="min-width:0"><span class="nm">'+jp(h)+'</span><span class="en">'+h+'</span></span>';
+    b.onclick=()=>pick(h);
+    grid.appendChild(b);
+  });
+}
+function pick(name){ selected=name; renderDetail(); renderGrid(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+$("#q").addEventListener("input",e=>{ query=e.target.value; $("#clr").style.display=query?"block":"none"; renderGrid(); });
+$("#clr").onclick=()=>{ query=""; $("#q").value=""; $("#clr").style.display="none"; renderGrid(); };
+
+const modal=$("#modal");
+$("#qrbtn").onclick=()=>{
+  const url=location.href; $("#urlfield").value=url;
+  const local = location.protocol==="file:" || /^(localhost|127\.|192\.168\.|10\.)/.test(location.hostname);
+  const qrimg=$("#qrimg"); qrimg.innerHTML="";
+  const img=document.createElement("img"); img.alt="QR";
+  img.src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data="+encodeURIComponent(url);
+  img.onerror=()=>{ qrimg.innerHTML='<div style="color:#0f172a;font-size:.72rem;padding:20px">QR画像を取得できませんでした。下のURLをコピーしてください。</div>'; };
+  qrimg.appendChild(img);
+  $("#qrwarn").textContent = local ? "※ 今このページはローカルで開かれています。この状態のQRはスマホからは開けません。まず公開してください。" : "";
+  modal.classList.add("show");
+};
+$("#closemodal").onclick=()=>modal.classList.remove("show");
+modal.addEventListener("click",e=>{ if(e.target===modal) modal.classList.remove("show"); });
+$("#copyurl").onclick=()=>{ const f=$("#urlfield"); f.select(); navigator.clipboard&&navigator.clipboard.writeText(f.value); $("#copyurl").textContent="済"; setTimeout(()=>$("#copyurl").textContent="コピー",1200); };
+
+renderFilters(); renderDetail(); renderGrid();
+</script>
+</body>
+</html>
