@@ -75,6 +75,39 @@
   .rnitem .rnsrc{display:block;margin-top:4px;color:#64748b;font-size:.7rem}
   .rncaveat{margin-top:10px;font-size:.68rem;color:#64748b;line-height:1.6}
 
+  /* スタイルバッジ */
+  .stbadge{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:800;padding:3px 8px;border-radius:7px;cursor:help}
+  .stbadge.poke{background:#1e3a8a;color:#bfdbfe}
+  .stbadge.brawl{background:#7c2d12;color:#fed7aa}
+  .stbadge.mixed{background:#334155;color:#cbd5e1}
+  /* マップ関連 */
+  .mapsec{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#0b1324;padding:12px}
+  .mapsec h4{margin:0 0 8px;font-size:.75rem;color:var(--mut);font-family:ui-monospace,monospace;letter-spacing:.05em}
+  .mline{display:flex;flex-wrap:wrap;gap:6px}
+  .mtag{display:inline-flex;align-items:center;gap:5px;font-size:.76rem;padding:5px 9px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:#fff;cursor:pointer}
+  .mtag .mm{font-size:.6rem;color:#94a3b8;font-family:ui-monospace,monospace}
+  .mtag.good{border-color:#059669}.mtag.bad{border-color:#e11d48}
+
+  /* マップ適正セレクタ & バッジ */
+  .mapsel{display:flex;gap:6px;align-items:center}
+  .mapsel select{flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);color:var(--txt);font-size:15px;outline:none}
+  .mapsel select:focus{border-color:#64748b}
+  .fit{width:22px;text-align:center;font-size:.9rem;font-weight:800;flex:none;cursor:help;line-height:1}
+  .fit.good{color:#34d399}
+  .fit.bad{color:#fb7185}
+  .fit.mixed{color:#fbbf24}
+  .mapsel select.unset{border-color:#fbbf24;background:#1c1917}
+  .ctxhint{margin:0 0 12px;border:1px dashed #fbbf24;border-radius:12px;background:#1c1917;padding:11px 12px;font-size:.78rem;color:#fbbf24;line-height:1.6}
+  .pickbox{margin:0 0 12px;border:1px solid #065f46;border-radius:12px;background:#052e26;padding:12px}
+  .pickbox h4{margin:0 0 8px;font-size:.78rem;color:#34d399}
+  .pickbox .empty2{color:#64748b}
+  .fitlegend{font-size:.66rem;color:#64748b;margin-top:8px;line-height:1.6}
+  /* チップ（最適ピック・マップビュー用） */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;padding:6px 10px;border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:#fff;cursor:pointer}
+  .chip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .chip.tank{border-color:#0369a1}.chip.damage{border-color:#9f1239}.chip.support{border-color:#047857}
+  .chip .srcnum{margin-left:2px;font-size:.68rem;font-weight:800;font-family:ui-monospace,monospace;color:#34d399}
+
   .cols{display:grid;gap:10px;grid-template-columns:1fr}
   @media(min-width:820px){.cols{grid-template-columns:1fr 1fr 1fr}}
   .col{border:1px solid var(--line);border-radius:12px;background:#0b1324;padding:10px}
@@ -133,6 +166,7 @@
     <div class="sub">ヒーローを選ぶと「そのヒーローに強い順」に色分け表示。緑ほど刺さる（対策候補）、赤はそのヒーローが有利な相手。</div>
   </header>
 
+  <div id="counterview">
   <div class="sticky">
     <div class="controls">
       <div class="searchbox">
@@ -140,6 +174,9 @@
         <button class="clr" id="clr" style="display:none" aria-label="消去">×</button>
       </div>
       <div class="filters" id="filters"></div>
+      <div class="mapsel">
+        <select id="mapsel"></select>
+      </div>
     </div>
   </div>
 
@@ -147,6 +184,7 @@
 
   <div class="listhead"><h2>ヒーロー一覧</h2><span class="count" id="shown"></span></div>
   <div class="grid" id="grid"></div>
+  </div>
 
   <button class="qrbtn" id="qrbtn">📱 スマホで開く（QR表示）</button>
 
@@ -154,7 +192,8 @@
     <div class="warn"><span class="ic">⚠</span>
       <span>相性は固定値ではありません（パッチ・マップ・ランク帯・技量で変動）。数値は各ヒーローが<b>選択ヒーロー</b>に対してどれだけ有利かのスコア（-20〜+20）です。overpickerの<b>独自スコア</b>であり、勝率などの実測値ではない点にご注意を。</span>
     </div>
-    <div class="src"><b>情報源</b>：overpicker.com/counters（制作者 Autopoietico、最終更新 2026-07-03）のカウンター・スコア表(-20〜+20)をそのまま使用（Blizzard非公式）。日本語名・ロールは Overwatch公式(ja-jp)＋apexaim.yqz.jp を参照。</div>
+    <div class="src"><b>情報源</b>：overpicker.com/counters（制作者 Autopoietico、最終更新 2026-07-03）のカウンター・スコア表(-20〜+20)と、同ページ内の得意/苦手マップ（各3件）をそのまま使用（Blizzard非公式・独自評価で勝率実測ではありません）。マップのモード分類は Overwatch公式/Wiki 準拠。日本語名・ロールは Overwatch公式(ja-jp)＋apexaim.yqz.jp を参照。</div>
+    <div class="live"><b>「ポーク型/ブロウル型」ラベルについて</b>：上記マップデータから<b>機械的に算出した傾向</b>です（得意3件がすべてエスコート/ハイブリッド、かつ苦手3件がすべてコントロール/プッシュ/フラッシュポイント＝ポーク型、その逆＝ブロウル型、それ以外＝傾向なし）。52体中29体が該当し、偶然の期待値1.8体を大きく上回ります（並べ替え検定 p&lt;0.0001）。ただし<b>「射線の長さが原因」という解釈は出典に基づくものではなく推論</b>です。相性は固定値ではなく参考程度に。</div>
   </footer>
 </div>
 
@@ -224,6 +263,17 @@ function findNotes(hero){
 }
 const LEVEL_LABEL = {conf:"複数ソース一致(overpickerと相違)", disp:"ソース間で対立(断定不可)", single:"単一ソースのみ(断定不可)"};
 
+
+// ==== マップ/モードデータ ====
+// 出典: overpicker.com/counters ページ内 heroMeta の best_maps / worst_maps（Autopoietico, 2026-07-03）
+// モード分類: Overwatch公式/Wiki準拠。HERO_STYLE は上記データから機械的に算出した傾向ラベル（後述の注記参照）
+const MAP_MODE = {"Aatlis":"Flashpoint","Antarctic Peninsula":"Control","Blizzard World":"Hybrid","Busan":"Control","Circuit Royal":"Escort","Colosseo":"Push","Dorado":"Escort","Eichenwalde":"Hybrid","Esperança":"Push","Havana":"Escort","Hollywood":"Hybrid","Ilios":"Control","Junkertown":"Escort","King's Row":"Hybrid","Lijiang Tower":"Control","Midtown":"Hybrid","Neon Junction":"Hybrid","Nepal":"Control","New Junk City":"Flashpoint","New Queen Street":"Push","Numbani":"Hybrid","Oasis":"Control","Paraíso":"Hybrid","Rialto":"Escort","Route 66":"Escort","Runasapi":"Push","Samoa":"Control","Shambali Monastery":"Escort","Suravasa":"Flashpoint","Watchpoint: Gibraltar":"Escort"};
+const MAP_JP = {"Aatlis":"アトリス","Antarctic Peninsula":"南極半島","Blizzard World":"ブリザード・ワールド","Busan":"釜山","Circuit Royal":"サーキット・ロイヤル","Colosseo":"コロッセオ","Dorado":"ドラド","Eichenwalde":"アイヘンヴァルデ","Esperança":"エスペランサ","Havana":"ハバナ","Hollywood":"ハリウッド","Ilios":"イリオス","Junkertown":"ジャンカータウン","King's Row":"キングス・ロウ","Lijiang Tower":"麗江タワー","Midtown":"ミッドタウン","Neon Junction":"ネオン・ジャンクション","Nepal":"ネパール","New Junk City":"ニュー・ジャンク・シティ","New Queen Street":"ニュー・クイーン・ストリート","Numbani":"ナンバーニ","Oasis":"オアシス","Paraíso":"パライソ","Rialto":"リアルト","Route 66":"ルート66","Runasapi":"ルナサピ","Samoa":"サモア","Shambali Monastery":"シャンバリ修道院","Suravasa":"スラヴァーサ","Watchpoint: Gibraltar":"ウォッチポイント：ジブラルタル"};
+const MODE_JP = {"Control":"コントロール","Escort":"エスコート","Hybrid":"ハイブリッド","Push":"プッシュ","Flashpoint":"フラッシュポイント"};
+const HERO_MAPS = {"Ana":{"best":["Rialto","King's Row","Havana"],"worst":["Oasis","Esperança","Busan"]},"Anran":{"best":["Colosseo","Aatlis","Samoa"],"worst":["Junkertown","King's Row","Circuit Royal"]},"Ashe":{"best":["Circuit Royal","Junkertown","Rialto"],"worst":["Nepal","Ilios","Lijiang Tower"]},"Baptiste":{"best":["Numbani","King's Row","Dorado"],"worst":["New Junk City","Aatlis","Colosseo"]},"Bastion":{"best":["Neon Junction","Circuit Royal","King's Row"],"worst":["Suravasa","New Junk City","Colosseo"]},"Brigitte":{"best":["Aatlis","New Junk City","Samoa"],"worst":["Midtown","Blizzard World","Circuit Royal"]},"Cassidy":{"best":["Antarctic Peninsula","Oasis","Busan"],"worst":["Blizzard World","Rialto","Shambali Monastery"]},"D.Va":{"best":["Numbani","Watchpoint: Gibraltar","Dorado"],"worst":["Nepal","Lijiang Tower","Neon Junction"]},"Domina":{"best":["Havana","Circuit Royal","Rialto"],"worst":["Colosseo","Oasis","Aatlis"]},"Doomfist":{"best":["Colosseo","Lijiang Tower","Suravasa"],"worst":["Hollywood","Paraíso","Route 66"]},"Echo":{"best":["Eichenwalde","Dorado","Ilios"],"worst":["Havana","Neon Junction","Midtown"]},"Emre":{"best":["Blizzard World","Havana","Circuit Royal"],"worst":["New Junk City","Ilios","Lijiang Tower"]},"Freja":{"best":["Dorado","Circuit Royal","Paraíso"],"worst":["Suravasa","Neon Junction","New Junk City"]},"Genji":{"best":["Watchpoint: Gibraltar","Colosseo","New Junk City"],"worst":["Neon Junction","Circuit Royal","Junkertown"]},"Hanzo":{"best":["Midtown","Shambali Monastery","King's Row"],"worst":["Ilios","Samoa","Busan"]},"Hazard":{"best":["Ilios","Aatlis","Suravasa"],"worst":["Havana","Midtown","King's Row"]},"Illari":{"best":["Shambali Monastery","Hollywood","Midtown"],"worst":["Runasapi","New Junk City","Colosseo"]},"Jetpack Cat":{"best":["Eichenwalde","Ilios","Lijiang Tower"],"worst":["Hollywood","Midtown","Neon Junction"]},"Junker Queen":{"best":["New Junk City","Aatlis","Runasapi"],"worst":["Dorado","Blizzard World","Numbani"]},"Junkrat":{"best":["Eichenwalde","King's Row","Hollywood"],"worst":["Havana","New Queen Street","Busan"]},"Juno":{"best":["Runasapi","Numbani","New Queen Street"],"worst":["Rialto","Eichenwalde","Nepal"]},"Kiriko":{"best":["Esperança","Antarctic Peninsula","Neon Junction"],"worst":["Hollywood","Route 66","Eichenwalde"]},"Lifeweaver":{"best":["Watchpoint: Gibraltar","Numbani","Route 66"],"worst":["Lijiang Tower","Eichenwalde","Nepal"]},"Lúcio":{"best":["Ilios","Lijiang Tower","Nepal"],"worst":["Watchpoint: Gibraltar","Junkertown","Blizzard World"]},"Mauga":{"best":["Samoa","Busan","Antarctic Peninsula"],"worst":["Eichenwalde","Blizzard World","Rialto"]},"Mei":{"best":["King's Row","Shambali Monastery","Neon Junction"],"worst":["Colosseo","Ilios","Watchpoint: Gibraltar"]},"Mercy":{"best":["Route 66","Dorado","Blizzard World"],"worst":["Nepal","Samoa","Antarctic Peninsula"]},"Mizuki":{"best":["Neon Junction","Antarctic Peninsula","Aatlis"],"worst":["Route 66","Junkertown","Watchpoint: Gibraltar"]},"Moira":{"best":["Nepal","Busan","Oasis"],"worst":["Circuit Royal","Havana","Rialto"]},"Orisa":{"best":["Rialto","Paraíso","Havana"],"worst":["Esperança","Aatlis","Suravasa"]},"Pharah":{"best":["Ilios","Lijiang Tower","Eichenwalde"],"worst":["Havana","Neon Junction","Midtown"]},"Ramattra":{"best":["Shambali Monastery","Havana","Midtown"],"worst":["Colosseo","Esperança","Runasapi"]},"Reaper":{"best":["Ilios","Dorado","Nepal"],"worst":["Circuit Royal","Rialto","Midtown"]},"Reinhardt":{"best":["King's Row","Eichenwalde","Lijiang Tower"],"worst":["Junkertown","Paraíso","Watchpoint: Gibraltar"]},"Roadhog":{"best":["Ilios","Oasis","Nepal"],"worst":["Numbani","Circuit Royal","Blizzard World"]},"Sierra":{"best":["Dorado","Route 66","Watchpoint: Gibraltar"],"worst":["New Junk City","Aatlis","Ilios"]},"Sigma":{"best":["Circuit Royal","Havana","Shambali Monastery"],"worst":["Lijiang Tower","New Junk City","New Queen Street"]},"Shion":{"best":["Neon Junction","Colosseo","Aatlis"],"worst":["Circuit Royal","King's Row","Dorado"]},"Sojourn":{"best":["Neon Junction","Midtown","Circuit Royal"],"worst":["Ilios","Watchpoint: Gibraltar","Dorado"]},"Soldier: 76":{"best":["New Queen Street","Busan","Esperança"],"worst":["Ilios","Eichenwalde","King's Row"]},"Sombra":{"best":["Blizzard World","Esperança","Colosseo"],"worst":["Dorado","Rialto","King's Row"]},"Symmetra":{"best":["Lijiang Tower","Nepal","Samoa"],"worst":["Watchpoint: Gibraltar","Rialto","Route 66"]},"Torbjörn":{"best":["Eichenwalde","Busan","Samoa"],"worst":["Junkertown","Hollywood","Watchpoint: Gibraltar"]},"Tracer":{"best":["Colosseo","New Junk City","Runasapi"],"worst":["Shambali Monastery","King's Row","Circuit Royal"]},"Vendetta":{"best":["Aatlis","Colosseo","Ilios"],"worst":["Havana","Watchpoint: Gibraltar","Blizzard World"]},"Venture":{"best":["Colosseo","Runasapi","Ilios"],"worst":["Route 66","Paraíso","Junkertown"]},"Widowmaker":{"best":["King's Row","Havana","Rialto"],"worst":["Nepal","Aatlis","Oasis"]},"Winston":{"best":["Watchpoint: Gibraltar","Numbani","Dorado"],"worst":["Eichenwalde","Midtown","Neon Junction"]},"Wrecking Ball":{"best":["Runasapi","Colosseo","Junkertown"],"worst":["Samoa","Nepal","Paraíso"]},"Wuyang":{"best":["New Queen Street","Colosseo","Midtown"],"worst":["Nepal","Numbani","Ilios"]},"Zarya":{"best":["Neon Junction","Antarctic Peninsula","Midtown"],"worst":["Ilios","Junkertown","Dorado"]},"Zenyatta":{"best":["Havana","Rialto","Circuit Royal"],"worst":["Oasis","Busan","Aatlis"]}};
+const HERO_STYLE = {"Ana":"poke","Anran":"brawl","Ashe":"poke","Baptiste":"poke","Bastion":"poke","Brigitte":"brawl","Cassidy":"brawl","D.Va":"mixed","Domina":"poke","Doomfist":"brawl","Echo":"mixed","Emre":"poke","Freja":"mixed","Genji":"mixed","Hanzo":"poke","Hazard":"brawl","Illari":"poke","Jetpack Cat":"mixed","Junker Queen":"brawl","Junkrat":"mixed","Juno":"mixed","Kiriko":"mixed","Lifeweaver":"mixed","Lúcio":"brawl","Mauga":"brawl","Mei":"mixed","Mercy":"poke","Mizuki":"mixed","Moira":"brawl","Orisa":"poke","Pharah":"mixed","Ramattra":"poke","Reaper":"mixed","Reinhardt":"mixed","Roadhog":"brawl","Sierra":"poke","Sigma":"poke","Shion":"mixed","Sojourn":"mixed","Soldier: 76":"mixed","Sombra":"mixed","Symmetra":"brawl","Torbjörn":"mixed","Tracer":"brawl","Vendetta":"brawl","Venture":"brawl","Widowmaker":"poke","Winston":"mixed","Wrecking Ball":"mixed","Wuyang":"mixed","Zarya":"mixed","Zenyatta":"poke"};
+const STYLE_LABEL = {poke:{t:"ポーク型",d:"エスコート/ハイブリッド（射線が長い）で強く、コントロール/プッシュ/フラッシュポイントで苦しい傾向"},brawl:{t:"ブロウル型",d:"コントロール/プッシュ/フラッシュポイント（近距離・密集）で強く、エスコート/ハイブリッドで苦しい傾向"},mixed:{t:"傾向なし",d:"マップ傾向に一貫した偏りが見られないヒーロー"}};
+
 const ROLE = {
   Tank:{key:"tank",jp:"タンク"},
   Damage:{key:"damage",jp:"ダメージ"},
@@ -276,6 +326,12 @@ function renderDetail(){
   const head=document.createElement("div"); head.className="dhead";
   head.innerHTML='<span class="badge '+r.key+'">'+({Tank:"TANK",Damage:"DPS",Support:"SUP"}[heroRoles[selected]])+'</span>'+
     '<span class="dname">'+jp(selected)+'</span><span class="den">'+selected+'</span>';
+  const st=HERO_STYLE[selected];
+  if(st){
+    const sb=document.createElement("span"); sb.className="stbadge "+st;
+    sb.textContent=STYLE_LABEL[st].t; sb.title=STYLE_LABEL[st].d;
+    head.appendChild(sb);
+  }
   const close=document.createElement("button"); close.className="close"; close.textContent="閉じる";
   close.onclick=()=>{selected=null; renderDetail(); renderGrid();};
   head.appendChild(close);
@@ -293,6 +349,41 @@ function renderDetail(){
     '<span><i class="lg sm10">-10</i>不利</span>'+
     '<span><i class="lg sm20">-20</i>非推奨</span>';
   box.appendChild(legend);
+
+  // 論理積: カウンター有利 かつ マップ得意
+  if(!mapCtx){
+    const hint=document.createElement("div"); hint.className="ctxhint";
+    hint.textContent="🗺 上の「マップ/ルール」を選ぶと、各ヒーローに ◎(得意) / △(苦手) が併記され、最適ピック（カウンター有利かつマップ得意）が上に表示されます。";
+    box.appendChild(hint);
+  }
+  if(mapCtx){
+    const cands = ALL.filter(h=>h!==selected)
+      .map(h=>({h, v:(counterMatrix[h]&&counterMatrix[h][selected]!==undefined)?counterMatrix[h][selected]:0, f:fitOf(h)}))
+      .filter(x=>x.v>0 && x.f==="good")
+      .sort((a,b)=> b.v-a.v || a.h.localeCompare(b.h));
+    const pb=document.createElement("div"); pb.className="pickbox";
+    pb.innerHTML='<h4>🎯 '+ctxLabel()+' × 対'+jp(selected)+'　最適ピック（カウンター有利 かつ マップ得意）</h4>';
+    if(cands.length){
+      const line=document.createElement("div"); line.className="mline";
+      cands.forEach(({h,v})=>{
+        const rk=ROLE[heroRoles[h]].key;
+        const b=document.createElement("button"); b.className="chip "+rk;
+        b.innerHTML='<span class="dot '+rk+'"></span>'+jp(h)+'<span class="srcnum">'+(v>0?"+":"")+v+'</span>';
+        b.title=jp(h)+" / "+h+"｜カウンター "+(v>0?"+":"")+v+"、"+ctxLabel()+"が得意";
+        b.onclick=()=>pick(h);
+        line.appendChild(b);
+      });
+      pb.appendChild(line);
+    } else {
+      const e=document.createElement("div"); e.className="empty2";
+      e.textContent="両方の条件を満たすヒーローは、この出典の範囲では見つかりません（マップ情報は各ヒーロー得意3件のみのため、該当が出ないことは珍しくありません）。";
+      pb.appendChild(e);
+    }
+    const lg=document.createElement("div"); lg.className="fitlegend";
+    lg.textContent="◎=得意マップ ／ △=苦手マップ ／ ◇=同モード内で得意・苦手が混在。マークが無い＝この出典に記載なし（各ヒーロー得意3件・苦手3件のみ記載のため、「普通」とは限りません）。";
+    pb.appendChild(lg);
+    box.appendChild(pb);
+  }
 
   // ロール切替タブ
   const tabs=document.createElement("div"); tabs.className="dtabs";
@@ -331,6 +422,13 @@ function renderDetail(){
       nm.title=jp(h)+" / "+h; nm.onclick=()=>pick(h);
       const sc=document.createElement("span"); sc.className="sc "+scoreClass(v); sc.textContent=scoreText(v);
       row.appendChild(nm);
+      const f=fitOf(h);
+      if(f){
+        const fb=document.createElement("span"); fb.className="fit "+f;
+        fb.textContent=FIT_MARK[f];
+        fb.title=ctxLabel()+"："+FIT_DESC[f];
+        row.appendChild(fb);
+      }
       const cellNote=RESEARCH_NOTES.find(n=>n.pair.includes(selected)&&n.pair.includes(h));
       if(cellNote){
         const flag=document.createElement("span");
@@ -343,6 +441,28 @@ function renderDetail(){
     });
   }
   box.appendChild(col);
+
+  const hm=HERO_MAPS[selected];
+  if(hm){
+    const ms=document.createElement("div"); ms.className="mapsec";
+    ms.innerHTML='<h4>🗺 得意 / 苦手マップ</h4>';
+    const mkline=(arr,tone)=>{
+      const l=document.createElement("div"); l.className="mline"; l.style.marginBottom="8px";
+      arr.forEach(m=>{
+        const t=document.createElement("button"); t.className="mtag "+tone;
+        t.innerHTML=(tone==="good"?"▲ ":"▼ ")+MAP_JP[m]+'<span class="mm">'+MODE_JP[MAP_MODE[m]]+'</span>';
+        t.onclick=()=>{ setMapCtx("map:"+m); window.scrollTo({top:0,behavior:"smooth"}); };
+        l.appendChild(t);
+      });
+      return l;
+    };
+    ms.appendChild(mkline(hm.best,"good"));
+    ms.appendChild(mkline(hm.worst,"bad"));
+    const note=document.createElement("div"); note.className="rncaveat";
+    note.textContent="各3件のみ（出典の記載範囲）。マップ名をタップするとそのマップの得意/苦手ヒーロー一覧に移動します。";
+    ms.appendChild(note);
+    box.appendChild(ms);
+  }
 
   const heroNotes=findNotes(selected);
   if(heroNotes.length){
@@ -412,6 +532,60 @@ $("#qrbtn").onclick=()=>{
 $("#closemodal").onclick=()=>modal.classList.remove("show");
 modal.addEventListener("click",e=>{ if(e.target===modal) modal.classList.remove("show"); });
 $("#copyurl").onclick=()=>{ const f=$("#urlfield"); f.select(); navigator.clipboard&&navigator.clipboard.writeText(f.value); $("#copyurl").textContent="済"; setTimeout(()=>$("#copyurl").textContent="コピー",1200); };
+
+// ===== マップ/モード適正（論理積用） =====
+// ctx = null | {type:"map", key:"Ilios"} | {type:"mode", key:"Control"}
+let mapCtx = null;
+function fitOf(hero){
+  if(!mapCtx) return null;
+  const hm = HERO_MAPS[hero]; if(!hm) return null;
+  if(mapCtx.type==="map"){
+    if(hm.best.includes(mapCtx.key)) return "good";
+    if(hm.worst.includes(mapCtx.key)) return "bad";
+    return null;
+  }
+  const b = hm.best.filter(m=>MAP_MODE[m]===mapCtx.key).length;
+  const w = hm.worst.filter(m=>MAP_MODE[m]===mapCtx.key).length;
+  if(b&&w) return "mixed";
+  if(b) return "good";
+  if(w) return "bad";
+  return null;
+}
+const FIT_MARK = {good:"◎", bad:"△", mixed:"◇"};
+const FIT_DESC = {
+  good:"この出典が「得意」に挙げているマップ",
+  bad:"この出典が「苦手」に挙げているマップ",
+  mixed:"同モード内で得意マップと苦手マップの両方がある"
+};
+function ctxLabel(){
+  if(!mapCtx) return "";
+  return mapCtx.type==="map" ? MAP_JP[mapCtx.key] : MODE_JP[mapCtx.key]+"全体";
+}
+function setMapCtx(v){
+  const sel=$("#mapsel");
+  mapCtx = v ? {type:v.split(":")[0], key:v.slice(v.indexOf(":")+1)} : null;
+  if(sel){ sel.value = v||""; sel.className = mapCtx ? "" : "unset"; }
+  renderDetail();
+}
+// セレクタ構築
+(function(){
+  const sel=$("#mapsel");
+  const o0=document.createElement("option"); o0.value=""; o0.textContent="🗺 マップ/ルールを指定しない"; sel.appendChild(o0);
+  const gm=document.createElement("optgroup"); gm.label="ルール（モード全体）";
+  ["Control","Escort","Hybrid","Push","Flashpoint"].forEach(m=>{
+    const o=document.createElement("option"); o.value="mode:"+m; o.textContent=MODE_JP[m]+"全体"; gm.appendChild(o);
+  });
+  sel.appendChild(gm);
+  ["Control","Escort","Hybrid","Push","Flashpoint"].forEach(mode=>{
+    const g=document.createElement("optgroup"); g.label=MODE_JP[mode];
+    Object.keys(MAP_MODE).filter(m=>MAP_MODE[m]===mode).sort((a,b)=>MAP_JP[a].localeCompare(MAP_JP[b],"ja")).forEach(m=>{
+      const o=document.createElement("option"); o.value="map:"+m; o.textContent=MAP_JP[m]; g.appendChild(o);
+    });
+    sel.appendChild(g);
+  });
+  sel.onchange=()=>setMapCtx(sel.value);
+  sel.className="unset";
+})();
 
 renderFilters(); renderDetail(); renderGrid();
 </script>
